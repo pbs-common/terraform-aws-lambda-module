@@ -29,7 +29,7 @@ resource "aws_appconfig_configuration_profile" "config_profile" {
 }
 
 module "alarm" {
-  source = "github.com/pbs/terraform-aws-cloudwatch-alarms-module?ref=0.0.2"
+  source = "github.com/pbs/terraform-aws-cloudwatch-alarms-module?ref=0.0.30"
 
   namespace       = "AWS/Lambda"
   lambda_function = module.lambda.name
@@ -46,7 +46,7 @@ module "alarm" {
 }
 
 module "role" {
-  source = "github.com/pbs/terraform-aws-iam-role-module?ref=0.1.1"
+  source = "github.com/pbs/terraform-aws-iam-role-module?ref=1.0.0"
 
   policy_json = jsonencode({
     "Version" : "2012-10-17",
@@ -66,6 +66,7 @@ module "role" {
   environment  = var.environment
   product      = var.product
   repo         = var.repo
+  owner        = var.owner
 
   # Optional Parameters
   aws_services = ["appconfig"]
@@ -169,7 +170,7 @@ module "lambda" {
 
   handler  = "main.lambda_handler"
   filename = "../artifacts/app-config-handler.zip"
-  runtime  = "python3.9"
+  runtime  = "python3.13"
 
   environment_vars = {
     APP_NAME = aws_appconfig_application.app.name
@@ -183,5 +184,6 @@ module "lambda" {
   environment  = var.environment
   product      = var.product
   repo         = var.repo
+  owner        = var.owner
   organization = var.organization
 }

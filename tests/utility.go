@@ -16,12 +16,14 @@ type MyEvent struct {
 }
 
 func invokeLambda(t *testing.T, lambdaName string) (*lambda.InvokeOutput, error) {
-	session, err := session.NewSession()
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create AWS session: %v", err)
 		return nil, err
 	}
-	svc := lambda.New(session)
+	svc := lambda.New(sess)
 	input := &lambda.InvokeInput{
 		FunctionName: aws.String(lambdaName),
 		Payload:      []byte("{\"name\": \"Jane\"}"),
@@ -36,11 +38,13 @@ func invokeLambda(t *testing.T, lambdaName string) (*lambda.InvokeOutput, error)
 }
 
 func deleteLogGroup(t *testing.T, logGroupName string) {
-	session, err := session.NewSession()
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create AWS session: %v", err)
 	}
-	svc := cloudwatchlogs.New(session)
+	svc := cloudwatchlogs.New(sess)
 	input := cloudwatchlogs.DeleteLogGroupInput{
 		LogGroupName: &logGroupName,
 	}
@@ -51,12 +55,14 @@ func deleteLogGroup(t *testing.T, logGroupName string) {
 }
 
 func getAWSAccountID(t *testing.T) string {
-	session, err := session.NewSession()
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create AWS session: %v", err)
 		return ""
 	}
-	svc := sts.New(session)
+	svc := sts.New(sess)
 	result, err := svc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Fatalf("Failed to get AWS Account ID: %v", err)
@@ -66,10 +72,12 @@ func getAWSAccountID(t *testing.T) string {
 }
 
 func getAWSRegion(t *testing.T) string {
-	session, err := session.NewSession()
+	sess, err := session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	})
 	if err != nil {
 		t.Fatalf("Failed to create AWS session: %v", err)
 		return ""
 	}
-	return *session.Config.Region
+	return *sess.Config.Region
 }
