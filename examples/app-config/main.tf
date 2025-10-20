@@ -29,7 +29,7 @@ resource "aws_appconfig_configuration_profile" "config_profile" {
 }
 
 module "alarm" {
-  source = "github.com/pbs/terraform-aws-cloudwatch-alarms-module?ref=0.0.30"
+  source = "github.com/pbs/terraform-aws-cloudwatch-alarms-module?ref=1.0.0"
 
   namespace       = "AWS/Lambda"
   lambda_function = module.lambda.name
@@ -39,6 +39,7 @@ module "alarm" {
   # Tagging Parameters
   organization = var.organization
   environment  = var.environment
+  owner        = var.owner
   product      = var.product
   repo         = var.repo
 
