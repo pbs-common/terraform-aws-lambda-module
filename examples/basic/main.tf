@@ -1,12 +1,13 @@
 module "lambda" {
   source = "../.."
 
-  handler  = "main"
+  handler  = "bootstrap"
   filename = "../artifacts/handler.zip"
-  runtime  = "go1.x"
+  runtime  = "provided.al2023"
 
   environment  = var.environment
   product      = var.product
+  owner        = var.owner
   repo         = var.repo
   organization = var.organization
 }

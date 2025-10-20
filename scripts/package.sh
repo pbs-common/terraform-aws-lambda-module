@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
 
-# Unofficial bash strict mode: http://redsymbol.net/articles/unofficial-bash-strict-mode/
+# Unofficial bash strict mode
 set -euo pipefail
 IFS=$'\n\t'
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
+ARTIFACTS_DIR="$GIT_ROOT/examples/artifacts"
+SRC_DIR="$GIT_ROOT/examples/src"
+SRC_APP_CONFIG_DIR="$GIT_ROOT/examples/src-app-config"
 
-mkdir -p "$GIT_ROOT"/examples/artifacts
-pushd "$GIT_ROOT"/examples/src >/dev/null
+mkdir -p "$ARTIFACTS_DIR"
 
-GOOS=linux GOARCH=amd64 go build -o "$GIT_ROOT"/examples/artifacts/main
-zip -j "$GIT_ROOT"/examples/artifacts/handler.zip "$GIT_ROOT"/examples/artifacts/main
+# Build x86_64
+echo "🔨 Building x86_64 Lambda binary for provided.al2023..."
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "$ARTIFACTS_DIR/bootstrap" "$SRC_DIR/main.go"
+zip -j "$ARTIFACTS_DIR/handler.zip" "$ARTIFACTS_DIR/bootstrap"
 
-GOOS=linux GOARCH=arm64 go build -o "$GIT_ROOT"/examples/artifacts/main
-zip -j "$GIT_ROOT"/examples/artifacts/arm-handler.zip "$GIT_ROOT"/examples/artifacts/main
+# Build ARM64
+echo "🔨 Building ARM64 Lambda binary for provided.al2023..."
+GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o "$ARTIFACTS_DIR/bootstrap" "$SRC_DIR/main.go"
+zip -j "$ARTIFACTS_DIR/arm-handler.zip" "$ARTIFACTS_DIR/bootstrap"
 
-zip -j "$GIT_ROOT"/examples/artifacts/app-config-handler.zip "$GIT_ROOT"/examples/src-app-config/main.py
+# Package Python app config Lambda
+echo "📦 Packaging Python app config Lambda..."
+zip -j "$ARTIFACTS_DIR/app-config-handler.zip" "$SRC_APP_CONFIG_DIR/main.py"
+
+echo "✅ Lambda artifacts ready in $ARTIFACTS_DIR"

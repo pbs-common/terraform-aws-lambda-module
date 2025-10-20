@@ -25,9 +25,9 @@ locals {
 
   # Layers aren't supported for Docker images.
   default_layers = var.image_uri != null ? [] : compact([
-    "arn:aws:lambda:${data.aws_region.current.name}:${var.lambda_insights_extension_account_number}:layer:${local.lambda_insights_extension_name}:${local.lambda_insights_extension_version}",
-    var.add_ssm_extension_layer ? "arn:aws:lambda:${data.aws_region.current.name}:${var.parameters_and_secrets_extension_account_number}:layer:${local.parameters_and_secrets_extension_name}:${local.parameters_and_secrets_extension_version}" : "",
-    var.add_app_config_extension_layer ? "arn:aws:lambda:${data.aws_region.current.name}:${var.app_config_extension_account_number}:layer:${local.app_config_extension_name}:${local.app_config_extension_version}" : "",
+    "arn:aws:lambda:${data.aws_region.current.region}:${var.lambda_insights_extension_account_number}:layer:${local.lambda_insights_extension_name}:${local.lambda_insights_extension_version}",
+    var.add_ssm_extension_layer ? "arn:aws:lambda:${data.aws_region.current.region}:${var.parameters_and_secrets_extension_account_number}:layer:${local.parameters_and_secrets_extension_name}:${local.parameters_and_secrets_extension_version}" : "",
+    var.add_app_config_extension_layer ? "arn:aws:lambda:${data.aws_region.current.region}:${var.app_config_extension_account_number}:layer:${local.app_config_extension_name}:${local.app_config_extension_version}" : "",
   ])
 
   layers                = var.layers != null ? var.layers : local.default_layers
@@ -47,6 +47,7 @@ locals {
     {
       Name                                      = local.name
       "${var.organization}:billing:product"     = var.product
+      "${var.organization}:billing:owner"       = var.owner
       "${var.organization}:billing:environment" = var.environment
       creator                                   = local.creator
       repo                                      = var.repo

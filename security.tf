@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "default_policy_document" {
       "logs:CreateLogGroup",
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*",
+      "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*",
     ]
   }
 
@@ -23,8 +23,8 @@ data "aws_iam_policy_document" "default_policy_document" {
       "logs:CreateLogStream",
     ]
     resources = [
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${local.log_group_name}:*",
-      "arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda-insights:*",
+      "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:${local.log_group_name}:*",
+      "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda-insights:*",
     ]
   }
 
@@ -35,8 +35,8 @@ data "aws_iam_policy_document" "default_policy_document" {
       "ssm:GetParametersByPath",
     ]
     resources = [
-      "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_path}",
-      "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_path}*"
+      "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_path}",
+      "arn:aws:ssm:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_path}*"
     ]
   }
 
@@ -68,7 +68,7 @@ data "aws_iam_policy_document" "default_policy_document" {
 
 module "default_role" {
   count  = var.role_arn != null ? 0 : 1
-  source = "github.com/pbs/terraform-aws-iam-role-module?ref=0.2.1"
+  source = "github.com/pbs/terraform-aws-iam-role-module?ref=1.0.0"
 
   name = local.name
 
@@ -82,6 +82,7 @@ module "default_role" {
   environment  = var.environment
   product      = var.product
   repo         = var.repo
+  owner        = var.owner
   organization = var.organization
 }
 

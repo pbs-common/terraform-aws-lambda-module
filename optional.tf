@@ -12,7 +12,7 @@ variable "role_arn" {
 
 variable "timeout" {
   description = "Timeout in seconds of the Lambda"
-  default     = 3
+  default     = 20
   type        = number
 }
 
