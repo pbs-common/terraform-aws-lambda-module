@@ -47,8 +47,8 @@ output "code_deploy_revision" {
               Properties = {
                 Name           = aws_lambda_function.lambda.function_name
                 Alias          = "LIVE"
-                CurrentVersion = data.aws_lambda_alias.live[0].function_version
-                TargetVersion  = data.aws_lambda_alias.live[0].function_version // TODO: point to the NEXT alias
+                CurrentVersion = try(data.aws_lambda_alias.live[0].function_version, "$LATEST"),
+                TargetVersion  = "$LATEST"
               }
             }
           }
