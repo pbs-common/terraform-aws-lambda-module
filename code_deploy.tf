@@ -56,8 +56,9 @@ resource "aws_codedeploy_deployment_group" "this" {
 }
 
 // The current version that's live
-data "aws_lambda_alias" "live" {
-  count         = var.code_deploy == null ? 0 : 1
-  function_name = aws_lambda_function.lambda.function_name
-  name          = "LIVE"
+resource "aws_lambda_alias" "live" {
+  count            = var.code_deploy == null ? 0 : 1
+  name             = "LIVE"
+  function_name    = aws_lambda_function.lambda.function_name
+  function_version = "1"
 }
