@@ -197,3 +197,12 @@ variable "log_group_class" {
   default     = "STANDARD"
   type        = string
 }
+
+variable "code_deploy" {
+  description = "Configuration for code deploy, if you want to use it"
+  default     = null
+  type = object({
+    alarm_arns             = list(string)
+    deployment_config_name = string
+  })
+}
