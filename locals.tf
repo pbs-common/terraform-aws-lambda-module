@@ -7,12 +7,17 @@ locals {
   environment_vars = var.environment_vars != null ? var.environment_vars : { "SSM_PATH" = local.ssm_path }
   environment_map  = length(local.environment_vars) == 0 ? toset([]) : toset([local.environment_vars])
 
-  default_lambda_insights_extension_version_x86        = "21"
-  default_lambda_insights_extension_version_arm        = "2"
-  default_parameters_and_secrets_extension_version_arm = "2"
-  default_parameters_and_secrets_extension_version_x86 = "2"
-  default_app_config_extension_version_x86             = "82"
-  default_app_config_extension_version_arm             = "15"
+  // Lambda insights doesn't publish an SSM parameter with the latest version,
+  // so we have to rely on the table here:
+  // https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versions.html
+  default_lambda_insights_extension_version_x86 = "66"
+  default_lambda_insights_extension_version_arm = "31"
+
+  // Pull these dynamically from SSM
+  default_parameters_and_secrets_extension_version_arm = data.aws_ssm_parameter.parameters_and_secrets_arm_latest_version.value
+  default_parameters_and_secrets_extension_version_x86 = data.aws_ssm_parameter.parameters_and_secrets_x86_latest_version.value
+  default_app_config_extension_version_x86             = data.aws_ssm_parameter.app_config_x86_latest_version.value
+  default_app_config_extension_version_arm             = data.aws_ssm_parameter.app_config_arm_latest_version.value
 
   lambda_insights_extension_version = var.lambda_insights_extension_version != null ? var.lambda_insights_extension_version : var.architectures == tolist(["arm64"]) ? local.default_lambda_insights_extension_version_arm : local.default_lambda_insights_extension_version_x86
   lambda_insights_extension_name    = var.architectures == tolist(["arm64"]) ? "LambdaInsightsExtension-Arm64" : "LambdaInsightsExtension"
