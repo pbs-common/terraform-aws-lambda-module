@@ -2,13 +2,16 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gruntwork-io/terratest/modules/docker"
 	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/retry"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 )
@@ -70,31 +73,32 @@ func testLambda(t *testing.T, variant string) {
 		docker.Run(t, tag, runOptions)
 		defer docker.Stop(t, []string{variant}, &docker.StopOptions{Time: 5, Logger: logger})
 
-		payload := []byte(`{}`)
+		body := retry.DoWithRetryContext(t, context.TODO(), "Local lambda invocation via HTTP", 5, 5 * time.Second, func () (string, error) {
+			payload := []byte(`{}`)
+			req, err := http.NewRequest("POST", "http://127.0.0.1:8080/2015-03-31/functions/function/invocations", bytes.NewBuffer(payload))
 
-		req, err := http.NewRequest("POST", "http://localhost:8080/2015-03-31/functions/function/invocations", bytes.NewBuffer(payload))
+			if err != nil {
+				return "", err
+			}
 
-		if err != nil {
-			t.Fatal(err)
-		}
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return "", err
+			}
 
-		req.Header.Set("Content-Type", "application/json")
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				return "", fmt.Errorf("Expected status code 200, got %d", resp.StatusCode)
+			}
 
-		resp, err := http.DefaultClient.Do(req)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return "", err
+			}
 
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		defer resp.Body.Close()
-
-		assert.Equal(t, 200, resp.StatusCode)
-
-		body, err := ioutil.ReadAll(resp.Body)
-
-		if err != nil {
-			t.Fatal(err)
-		}
+			return string(body[:]), nil
+		})
 
 		assert.Equal(t, "\"Hello Ishmael!\"", string(body))
 
