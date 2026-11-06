@@ -19,6 +19,8 @@ import (
 func testLambda(t *testing.T, variant string) {
 	t.Parallel()
 
+	ctx := context.Background()
+
 	terraformDir := fmt.Sprintf("../examples/%s", variant)
 
 	terraformOptions := &terraform.Options{
@@ -27,13 +29,13 @@ func testLambda(t *testing.T, variant string) {
 		Upgrade:      true,
 	}
 
-	defer terraform.Destroy(t, terraformOptions)
+	defer terraform.DestroyContext(t, ctx, terraformOptions)
 
 	// This is annoying, but necessary. Log Group isn't cleaned up correctly after destroy.
 	logGroupName := fmt.Sprintf("/aws/lambda/example-tf-pbs-lambda-%s", variant)
 	deleteLogGroup(t, logGroupName)
 
-	terraform.Init(t, terraformOptions)
+	terraform.InitContext(t, ctx, terraformOptions)
 
 	if variant == "docker" {
 		ecrTargetTerraformOptions := &terraform.Options{
@@ -42,9 +44,9 @@ func testLambda(t *testing.T, variant string) {
 			Targets:      []string{"module.ecr"},
 		}
 
-		terraform.Apply(t, ecrTargetTerraformOptions)
+		terraform.ApplyContext(t, ctx, ecrTargetTerraformOptions)
 
-		ecrRepo := terraform.Output(t, ecrTargetTerraformOptions, "ecr_repo_url")
+		ecrRepo := terraform.OutputContext(t, ctx, ecrTargetTerraformOptions, "ecr_repo_url")
 
 		tag := fmt.Sprintf("%s:latest", ecrRepo)
 		buildOptions := &docker.BuildOptions{
@@ -55,7 +57,7 @@ func testLambda(t *testing.T, variant string) {
 			},
 		}
 
-		docker.Build(t, "../examples/src-docker", buildOptions)
+		docker.BuildContext(t, ctx, "../examples/src-docker", buildOptions)
 
 		// We can test the image locally before pushing it to ECR
 
@@ -70,10 +72,10 @@ func testLambda(t *testing.T, variant string) {
 			},
 		}
 
-		docker.Run(t, tag, runOptions)
-		defer docker.Stop(t, []string{variant}, &docker.StopOptions{Time: 5, Logger: logger})
+		docker.RunContext(t, ctx, tag, runOptions)
+		defer docker.StopContext(t, ctx, []string{variant}, &docker.StopOptions{Time: 5, Logger: logger})
 
-		body := retry.DoWithRetryContext(t, context.TODO(), "Local lambda invocation via HTTP", 5, 5 * time.Second, func () (string, error) {
+		body := retry.DoWithRetryContext(t, ctx, "Local lambda invocation via HTTP", 5, 5 * time.Second, func () (string, error) {
 			payload := []byte(`{}`)
 			req, err := http.NewRequest("POST", "http://127.0.0.1:8080/2015-03-31/functions/function/invocations", bytes.NewBuffer(payload))
 
@@ -102,14 +104,14 @@ func testLambda(t *testing.T, variant string) {
 
 		assert.Equal(t, "\"Hello Ishmael!\"", string(body))
 
-		docker.Push(t, logger, tag)
+		docker.PushContext(t, ctx, logger, tag)
 	}
 
-	terraform.Apply(t, terraformOptions)
+	terraform.ApplyContext(t, ctx, terraformOptions)
 
-	arn := terraform.Output(t, terraformOptions, "arn")
-	name := terraform.Output(t, terraformOptions, "name")
-	qualifiedARN := terraform.Output(t, terraformOptions, "qualified_arn")
+	arn := terraform.OutputContext(t, ctx, terraformOptions, "arn")
+	name := terraform.OutputContext(t, ctx, terraformOptions, "name")
+	qualifiedARN := terraform.OutputContext(t, ctx, terraformOptions, "qualified_arn")
 
 	region := getAWSRegion(t)
 	accountID := getAWSAccountID(t)
