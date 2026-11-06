@@ -13,12 +13,12 @@ mkdir -p "$ARTIFACTS_DIR"
 
 # Build x86_64
 echo "🔨 Building x86_64 Lambda binary for provided.al2023..."
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "$ARTIFACTS_DIR/bootstrap" "$SRC_DIR/main.go"
+GOOS=linux GOARCH=amd64 go -C "$SRC_DIR" build -ldflags="-s -w" -o "$ARTIFACTS_DIR/bootstrap" "$SRC_DIR/main.go"
 zip -jFS "$ARTIFACTS_DIR/handler.zip" "$ARTIFACTS_DIR/bootstrap"
 
 # Build ARM64
 echo "🔨 Building ARM64 Lambda binary for provided.al2023..."
-GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o "$ARTIFACTS_DIR/bootstrap" "$SRC_DIR/main.go"
+GOOS=linux GOARCH=arm64 go -C "$SRC_DIR" build -ldflags="-s -w" -o "$ARTIFACTS_DIR/bootstrap" "$SRC_DIR/main.go"
 zip -jFS "$ARTIFACTS_DIR/arm-handler.zip" "$ARTIFACTS_DIR/bootstrap"
 
 # Package Python app config Lambda
