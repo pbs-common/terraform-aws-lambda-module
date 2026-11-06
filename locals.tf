@@ -7,27 +7,22 @@ locals {
   environment_vars = var.environment_vars != null ? var.environment_vars : { "SSM_PATH" = local.ssm_path }
   environment_map  = length(local.environment_vars) == 0 ? toset([]) : toset([local.environment_vars])
 
-  default_lambda_insights_extension_version_x86        = "21"
-  default_lambda_insights_extension_version_arm        = "2"
-  default_parameters_and_secrets_extension_version_arm = "2"
-  default_parameters_and_secrets_extension_version_x86 = "2"
-  default_app_config_extension_version_x86             = "82"
-  default_app_config_extension_version_arm             = "15"
-
-  lambda_insights_extension_version = var.lambda_insights_extension_version != null ? var.lambda_insights_extension_version : var.architectures == tolist(["arm64"]) ? local.default_lambda_insights_extension_version_arm : local.default_lambda_insights_extension_version_x86
+  // Lambda insights doesn't publish an SSM parameter with the latest version,
+  // so we have to rely on the table here:
+  // https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versions.html
+  lambda_insights_extension_version = var.lambda_insights_extension_version != null ? var.lambda_insights_extension_version : var.architectures == tolist(["arm64"]) ? "31" : "66"
   lambda_insights_extension_name    = var.architectures == tolist(["arm64"]) ? "LambdaInsightsExtension-Arm64" : "LambdaInsightsExtension"
 
-  app_config_extension_version = var.app_config_extension_version != null ? var.app_config_extension_version : var.architectures == tolist(["arm64"]) ? local.default_app_config_extension_version_arm : local.default_app_config_extension_version_x86
-  app_config_extension_name    = var.architectures == tolist(["arm64"]) ? "AWS-AppConfig-Extension-Arm64" : "AWS-AppConfig-Extension"
+  // Pulled dynamically from SSM. Note that the parameter value is the layer ARN, and not just the version
+  parameters_and_secrets_extension_arn = var.architectures == tolist(["arm64"]) ? data.aws_ssm_parameter.parameters_and_secrets_arm_latest_version.value : data.aws_ssm_parameter.parameters_and_secrets_x86_latest_version.value
 
-  parameters_and_secrets_extension_version = var.parameters_and_secrets_extension_version != null ? var.parameters_and_secrets_extension_version : var.architectures == tolist(["arm64"]) ? local.default_parameters_and_secrets_extension_version_arm : local.default_parameters_and_secrets_extension_version_x86
-  parameters_and_secrets_extension_name    = var.architectures == tolist(["arm64"]) ? "AWS-Parameters-and-Secrets-Lambda-Extension-Arm64" : "AWS-Parameters-and-Secrets-Lambda-Extension"
+  app_config_extension_arn = var.architectures == tolist(["arm64"]) ? data.aws_ssm_parameter.app_config_arm_latest_version.value : data.aws_ssm_parameter.app_config_x86_latest_version.value
 
   # Layers aren't supported for Docker images.
   default_layers = var.image_uri != null ? [] : compact([
     "arn:aws:lambda:${data.aws_region.current.region}:${var.lambda_insights_extension_account_number}:layer:${local.lambda_insights_extension_name}:${local.lambda_insights_extension_version}",
-    var.add_ssm_extension_layer ? "arn:aws:lambda:${data.aws_region.current.region}:${var.parameters_and_secrets_extension_account_number}:layer:${local.parameters_and_secrets_extension_name}:${local.parameters_and_secrets_extension_version}" : "",
-    var.add_app_config_extension_layer ? "arn:aws:lambda:${data.aws_region.current.region}:${var.app_config_extension_account_number}:layer:${local.app_config_extension_name}:${local.app_config_extension_version}" : "",
+    var.add_ssm_extension_layer ? local.parameters_and_secrets_extension_arn : "",
+    var.add_app_config_extension_layer ? local.app_config_extension_arn : "",
   ])
 
   layers                = var.layers != null ? var.layers : local.default_layers

@@ -20,3 +20,20 @@ data "aws_subnets" "private_subnets" {
     values = ["*-private-*"]
   }
 }
+
+// Public SSM parameters for latest lambda extension versions
+data "aws_ssm_parameter" "parameters_and_secrets_x86_latest_version" {
+  name = "/aws/service/aws-parameters-and-secrets-lambda-extension/x86/latest"
+}
+
+data "aws_ssm_parameter" "parameters_and_secrets_arm_latest_version" {
+  name = "/aws/service/aws-parameters-and-secrets-lambda-extension/arm64/latest"
+}
+
+data "aws_ssm_parameter" "app_config_x86_latest_version" {
+  name = "/aws/service/aws-appconfig/lambda-extension/x86/latest"
+}
+
+data "aws_ssm_parameter" "app_config_arm_latest_version" {
+  name = "/aws/service/aws-appconfig/lambda-extension/arm64/latest"
+}

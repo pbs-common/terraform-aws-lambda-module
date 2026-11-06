@@ -6,9 +6,8 @@ IFS=$'\n\t'
 
 GIT_ROOT=$(git rev-parse --show-toplevel)
 
-if [[ ! -f "$GIT_ROOT"/examples/artifacts/handler.zip ]]; then
-    "$GIT_ROOT"/scripts/package.sh
-fi
+
+"$GIT_ROOT"/scripts/package.sh
 
 # We have to log into ECR now that we're doing Lambdas with containers
 aws ecr get-login-password --region 'us-east-1' | docker login --username AWS --password-stdin "$(aws sts get-caller-identity | jq -r '.Account').dkr.ecr.us-east-1.amazonaws.com"
