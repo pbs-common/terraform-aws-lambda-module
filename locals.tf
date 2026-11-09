@@ -7,13 +7,13 @@ locals {
   environment_vars = var.environment_vars != null ? var.environment_vars : { "SSM_PATH" = local.ssm_path }
   environment_map  = length(local.environment_vars) == 0 ? toset([]) : toset([local.environment_vars])
 
-  // Lambda insights doesn't publish an SSM parameter with the latest version,
-  // so we have to rely on the table here:
-  // https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versions.html
+  # Lambda insights doesn't publish an SSM parameter with the latest version,
+  # so we have to rely on the table here:
+  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versions.html
   lambda_insights_extension_version = var.lambda_insights_extension_version != null ? var.lambda_insights_extension_version : var.architectures == tolist(["arm64"]) ? "31" : "66"
   lambda_insights_extension_name    = var.architectures == tolist(["arm64"]) ? "LambdaInsightsExtension-Arm64" : "LambdaInsightsExtension"
 
-  // Pulled dynamically from SSM. Note that the parameter value is the layer ARN, and not just the version
+  # Pulled dynamically from SSM. Note that the parameter value is the layer ARN, and not just the version
   parameters_and_secrets_extension_arn = var.architectures == tolist(["arm64"]) ? data.aws_ssm_parameter.parameters_and_secrets_arm_latest_version.value : data.aws_ssm_parameter.parameters_and_secrets_x86_latest_version.value
 
   app_config_extension_arn = var.architectures == tolist(["arm64"]) ? data.aws_ssm_parameter.app_config_arm_latest_version.value : data.aws_ssm_parameter.app_config_x86_latest_version.value

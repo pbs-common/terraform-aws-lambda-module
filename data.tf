@@ -21,7 +21,7 @@ data "aws_subnets" "private_subnets" {
   }
 }
 
-// Public SSM parameters for latest lambda extension versions
+# Public SSM parameters for latest lambda extension versions
 data "aws_ssm_parameter" "parameters_and_secrets_x86_latest_version" {
   name = "/aws/service/aws-parameters-and-secrets-lambda-extension/x86/latest"
 }
