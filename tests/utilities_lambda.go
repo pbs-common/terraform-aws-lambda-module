@@ -2,19 +2,24 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gruntwork-io/terratest/modules/docker"
 	"github.com/gruntwork-io/terratest/modules/logger"
+	"github.com/gruntwork-io/terratest/modules/retry"
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 )
 
 func testLambda(t *testing.T, variant string) {
 	t.Parallel()
+
+	ctx := context.Background()
 
 	terraformDir := fmt.Sprintf("../examples/%s", variant)
 
@@ -24,13 +29,13 @@ func testLambda(t *testing.T, variant string) {
 		Upgrade:      true,
 	}
 
-	defer terraform.Destroy(t, terraformOptions)
+	defer terraform.DestroyContext(t, ctx, terraformOptions)
 
 	// This is annoying, but necessary. Log Group isn't cleaned up correctly after destroy.
 	logGroupName := fmt.Sprintf("/aws/lambda/example-tf-pbs-lambda-%s", variant)
 	deleteLogGroup(t, logGroupName)
 
-	terraform.Init(t, terraformOptions)
+	terraform.InitContext(t, ctx, terraformOptions)
 
 	if variant == "docker" {
 		ecrTargetTerraformOptions := &terraform.Options{
@@ -39,9 +44,9 @@ func testLambda(t *testing.T, variant string) {
 			Targets:      []string{"module.ecr"},
 		}
 
-		terraform.Apply(t, ecrTargetTerraformOptions)
+		terraform.ApplyContext(t, ctx, ecrTargetTerraformOptions)
 
-		ecrRepo := terraform.Output(t, ecrTargetTerraformOptions, "ecr_repo_url")
+		ecrRepo := terraform.OutputContext(t, ctx, ecrTargetTerraformOptions, "ecr_repo_url")
 
 		tag := fmt.Sprintf("%s:latest", ecrRepo)
 		buildOptions := &docker.BuildOptions{
@@ -52,7 +57,7 @@ func testLambda(t *testing.T, variant string) {
 			},
 		}
 
-		docker.Build(t, "../examples/src-docker", buildOptions)
+		docker.BuildContext(t, ctx, "../examples/src-docker", buildOptions)
 
 		// We can test the image locally before pushing it to ECR
 
@@ -67,45 +72,46 @@ func testLambda(t *testing.T, variant string) {
 			},
 		}
 
-		docker.Run(t, tag, runOptions)
-		defer docker.Stop(t, []string{variant}, &docker.StopOptions{Time: 5, Logger: logger})
+		docker.RunContext(t, ctx, tag, runOptions)
+		defer docker.StopContext(t, ctx, []string{variant}, &docker.StopOptions{Time: 5, Logger: logger})
 
-		payload := []byte(`{}`)
+		body := retry.DoWithRetryContext(t, ctx, "Local lambda invocation via HTTP", 5, 5 * time.Second, func () (string, error) {
+			payload := []byte(`{}`)
+			req, err := http.NewRequest("POST", "http://127.0.0.1:8080/2015-03-31/functions/function/invocations", bytes.NewBuffer(payload))
 
-		req, err := http.NewRequest("POST", "http://localhost:8080/2015-03-31/functions/function/invocations", bytes.NewBuffer(payload))
+			if err != nil {
+				return "", err
+			}
 
-		if err != nil {
-			t.Fatal(err)
-		}
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				return "", err
+			}
 
-		req.Header.Set("Content-Type", "application/json")
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				return "", fmt.Errorf("Expected status code 200, got %d", resp.StatusCode)
+			}
 
-		resp, err := http.DefaultClient.Do(req)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return "", err
+			}
 
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		defer resp.Body.Close()
-
-		assert.Equal(t, 200, resp.StatusCode)
-
-		body, err := ioutil.ReadAll(resp.Body)
-
-		if err != nil {
-			t.Fatal(err)
-		}
+			return string(body[:]), nil
+		})
 
 		assert.Equal(t, "\"Hello Ishmael!\"", string(body))
 
-		docker.Push(t, logger, tag)
+		docker.PushContext(t, ctx, logger, tag)
 	}
 
-	terraform.Apply(t, terraformOptions)
+	terraform.ApplyContext(t, ctx, terraformOptions)
 
-	arn := terraform.Output(t, terraformOptions, "arn")
-	name := terraform.Output(t, terraformOptions, "name")
-	qualifiedARN := terraform.Output(t, terraformOptions, "qualified_arn")
+	arn := terraform.OutputContext(t, ctx, terraformOptions, "arn")
+	name := terraform.OutputContext(t, ctx, terraformOptions, "name")
+	qualifiedARN := terraform.OutputContext(t, ctx, terraformOptions, "qualified_arn")
 
 	region := getAWSRegion(t)
 	accountID := getAWSAccountID(t)
